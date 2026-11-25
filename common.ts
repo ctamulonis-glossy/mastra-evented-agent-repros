@@ -21,7 +21,7 @@ export const KIND = process.env.REPRO_KIND ?? 'evented';
 export const REPLICA = process.env.REPLICA ?? 'main';
 
 export const db = new pg.Pool({ connectionString: PG_URL, max: 4 });
-export const log = (...args: unknown[]) => console.log(`[${REPLICA}]`, ...args);
+export const log = (...args: unknown[]) => console.log(`${new Date().toISOString().slice(11, 23)} [${REPLICA}]`, ...args);
 
 const usage = { inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 }, outputTokens: { total: 1, text: 1, reasoning: 0 } };
 type Step = { toolCall?: { name: string; input: unknown }; text?: string };
@@ -61,6 +61,8 @@ export async function buildMastra(agentConfig: Omit<ConstructorParameters<typeof
     storage,
     pubsub,
     serverCache: cache,
+    // Durable runs write the `running` checkpoints recovery needs only with this on.
+    ...(KIND === 'durable' ? { recovery: { durableAgents: 'auto' as const } } : {}),
   });
   await mastra.startWorkers();
   return { mastra, agent: mastra.getAgent('repro') as any, inner: agent as any };
